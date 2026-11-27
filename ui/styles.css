@@ -389,11 +389,17 @@ h1 {
 }
 
 
+.title-guides-wrap,
 .title-path-wrap {
   margin: 4px auto 6px;
   width: min(100%, 200px);
 }
 
+.title-guides-wrap {
+  width: min(100%, 320px);
+}
+
+.title-guides-wrap p,
 .title-path-wrap p {
   margin: 0 0 4px;
   text-align: center;
@@ -403,6 +409,7 @@ h1 {
   color: #1c2430;
 }
 
+#title-guides,
 #title-path {
   display: block;
   width: 100%;
@@ -412,6 +419,11 @@ h1 {
   background: #f3eee4;
   border: 1px solid #8a6840;
   border-radius: 4px;
+}
+
+#title-guides {
+  max-height: 72px;
+  aspect-ratio: 320 / 80;
 }
 
 #screen-title {
@@ -471,13 +483,13 @@ body.is-portrait .view,
 
 @media (max-height: 390px) {
   .panel {
-    padding: 10px 14px 12px;
-    max-height: calc(100% - 12px);
+    padding: 8px 14px 8px;
+    max-height: calc(100% - 8px);
   }
 
   h1 {
-    margin: 0 0 6px;
-    padding: 2px 4px 6px;
+    margin: 0 0 4px;
+    padding: 2px 4px 4px;
     font-size: 1.05rem;
   }
 
@@ -485,11 +497,12 @@ body.is-portrait .view,
   .rule,
   .meta,
   .banner {
-    margin: 0 0 4px;
+    margin: 0 0 3px;
+    line-height: 1.3;
   }
 
   .action {
-    margin: 6px 0 0;
+    margin: 4px 0 0;
   }
 
   #screen-title {
@@ -512,14 +525,29 @@ body.is-portrait .view,
 
   #screen-title > .title-path-wrap {
     grid-column: 2;
-    grid-row: 2 / 7;
+    grid-row: 2 / 4;
     width: 100%;
     margin: 0;
   }
 
+  #screen-title > .title-guides-wrap {
+    grid-column: 1 / -1;
+    width: 100%;
+    margin: 1px 0 2px;
+  }
+
+  #screen-title > .title-guides-wrap p {
+    display: none;
+  }
+
   #screen-title #title-path {
-    max-height: 120px;
+    max-height: 96px;
     aspect-ratio: 240 / 160;
+  }
+
+  #screen-title #title-guides {
+    max-height: 36px;
+    aspect-ratio: 320 / 80;
   }
 }
 
