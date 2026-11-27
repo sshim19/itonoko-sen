@@ -21,6 +21,7 @@ import * as constants from "./engine/constants.mjs";
 import {
   drawScene,
   drawTitlePreview,
+  drawTitleGuides,
   clientToLogical,
   inLeftZone,
   inRightZone,
@@ -174,8 +175,9 @@ function paint() {
     });
     screens.setHints(!!state.hintLeft, !!state.hintRight);
   }
-  if (state.status === "title" && screens.el.titlePath) {
-    drawTitlePreview(screens.el.titlePath, state);
+  if (state.status === "title") {
+    if (screens.el.titlePath) drawTitlePreview(screens.el.titlePath, state);
+    if (screens.el.titleGuides) drawTitleGuides(screens.el.titleGuides);
   }
 }
 

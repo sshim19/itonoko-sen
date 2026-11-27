@@ -28,19 +28,23 @@
             <button type="button" class="btn-finish" id="btn-finish" hidden disabled aria-disabled="true">仕上げ</button>
           </header>
 
-          <canvas id="game" width="844" height="390" aria-label="プレイ画面。左で板を送って回し、右で刃を挽きます"></canvas>
+          <canvas id="game" width="844" height="390" aria-label="プレイ画面。左は上へずらして送り、まわりをなぞって回します。右の親指を上下にこすると刃が動いて切れます"></canvas>
 
           <div class="hud" id="play-hud" hidden>
             <p class="hud-time" id="hud-time"></p>
           </div>
 
-          <p class="hint hint-left" id="hint-left" hidden>送る・回す</p>
-          <p class="hint hint-right" id="hint-right" hidden>刃を挽く</p>
+          <p class="hint hint-left" id="hint-left" hidden>上へ送る・まわす</p>
+          <p class="hint hint-right" id="hint-right" hidden>上下にこする</p>
 
           <section class="panel" id="screen-title">
             <h1 tabindex="-1">糸鋸の線</h1>
-            <p class="lead">左の指で板を送って回し、右の指で刃を挽いて、今日の線に沿って切ります。</p>
-            <p class="rule">横向きにして、左手で板の送りと回転を、右手で刃の上下を動かします。刃は、挽いているときだけ進みます。送りが速すぎると、刃がしなったり折れたりします。同じ日は、だれが遊んでも同じ線です。時間が来ると、そこまでの切り口で仕上がります。</p>
+            <p class="lead">左の親指で板を送って回し、右の親指を上下にこすると刃が動いて、今日の線に沿って切れます。</p>
+            <p class="rule">横向きにして遊びます。左の親指は、掴み盤の中心から上へずらすと板が刃へ進み、下へずらすと戻ります。盤のまわりをなぞると板が回ります。右の親指を上下にこすると刃が動いて切れます。こすっているときだけ切り進みます。送りが速すぎると、刃がしなったり折れたりします。同じ日は同じ線です。時間が来ると、そこまでの切り口で仕上がります。</p>
+            <div class="title-guides-wrap">
+              <p>操作</p>
+              <canvas id="title-guides" width="320" height="80" aria-hidden="true"></canvas>
+            </div>
             <div class="title-path-wrap">
               <p>線</p>
               <canvas id="title-path" width="240" height="160" aria-hidden="true"></canvas>
