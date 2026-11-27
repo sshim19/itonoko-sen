@@ -850,6 +850,243 @@ function drawRevealOverlay(ctx, view, state) {
   ctx.restore();
 }
 
+function fillArrowHead(ctx, x, y, angle, size) {
+  const ax = Math.cos(angle);
+  const ay = Math.sin(angle);
+  const px = -ay;
+  const py = ax;
+  const back = size;
+  const half = size * 0.58;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x - ax * back + px * half, y - ay * back + py * half);
+  ctx.lineTo(x - ax * back - px * half, y - ay * back - py * half);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawGhostDot(ctx, view, x, y, alpha, radius = 16) {
+  const r = view.px(radius);
+  const cx = view.sx(x);
+  const cy = view.sy(y);
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = rgba(HUD_BG, 0.28 * alpha);
+  ctx.fill();
+  ctx.strokeStyle = rgba(INK, 0.5 * alpha);
+  ctx.lineWidth = Math.max(1.4, view.px(1.7));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.22, 0, Math.PI * 2);
+  ctx.fillStyle = rgba(INK, 0.32 * alpha);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawVerticalDoubleArrow(ctx, view, x, y0, y1, alpha, headWu = 11) {
+  const sx = view.sx(x);
+  const top = view.sy(Math.min(y0, y1));
+  const bot = view.sy(Math.max(y0, y1));
+  const head = view.px(headWu);
+  ctx.save();
+  ctx.strokeStyle = rgba(INK, 0.48 * alpha);
+  ctx.fillStyle = rgba(INK, 0.48 * alpha);
+  ctx.lineWidth = Math.max(1.8, view.px(2.2));
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(sx, top + head * 0.7);
+  ctx.lineTo(sx, bot - head * 0.7);
+  ctx.stroke();
+  fillArrowHead(ctx, sx, top, -Math.PI / 2, head);
+  fillArrowHead(ctx, sx, bot, Math.PI / 2, head);
+  ctx.restore();
+}
+
+function drawUpArrow(ctx, view, x, y0, y1, alpha, headWu = 11) {
+  const sx = view.sx(x);
+  const from = view.sy(y0);
+  const to = view.sy(y1);
+  const head = view.px(headWu);
+  ctx.save();
+  ctx.strokeStyle = rgba(INK, 0.5 * alpha);
+  ctx.fillStyle = rgba(INK, 0.5 * alpha);
+  ctx.lineWidth = Math.max(1.8, view.px(2.2));
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(sx, from);
+  ctx.lineTo(sx, to + head * 0.55);
+  ctx.stroke();
+  fillArrowHead(ctx, sx, to, -Math.PI / 2, head);
+  ctx.restore();
+}
+
+function drawArcArrow(ctx, view, cx, cy, r, a0, a1, alpha, headWu = 10) {
+  const x = view.sx(cx);
+  const y = view.sy(cy);
+  const pr = view.px(r);
+  const head = view.px(headWu);
+  const anticlockwise = a1 < a0;
+  ctx.save();
+  ctx.strokeStyle = rgba(INK, 0.5 * alpha);
+  ctx.fillStyle = rgba(INK, 0.5 * alpha);
+  ctx.lineWidth = Math.max(1.8, view.px(2.2));
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.arc(x, y, pr, a0, a1, anticlockwise);
+  ctx.stroke();
+  const ex = x + Math.cos(a1) * pr;
+  const ey = y + Math.sin(a1) * pr;
+  // Tangent: canvas angles increase clockwise visually (Y down).
+  const tangent = a1 + (anticlockwise ? -Math.PI / 2 : Math.PI / 2);
+  fillArrowHead(ctx, ex, ey, tangent, head);
+  ctx.restore();
+}
+
+function easeInOut(t) {
+  const u = clamp01(t);
+  return u * u * (3 - 2 * u);
+}
+
+/**
+ * 初回操作までの案内。hintLeft / hintRight と同じタイミング。
+ * 線と刃は覆わない（左は掴み盤の中、右は刃から離れた上下の軸のそば）。
+ */
+function drawMotionGuides(ctx, view, state, fx, reduced) {
+  const clock = Number(fx?.clock) || 0;
+  const leftOn = !!state?.hintLeft;
+  const rightOn = !!state?.hintRight;
+  if (!leftOn && !rightOn) return;
+
+  if (leftOn) {
+    const cx = GRIP_CX;
+    const cy = GRIP_CY;
+    const r = GRIP_R;
+    const tipY = cy - r * 0.52;
+    drawUpArrow(ctx, view, cx, cy - 8, tipY, 1);
+    // 盤の上側を大きく回る弧。刃（x=400）には届かない。
+    const arcR = r * 0.68;
+    drawArcArrow(ctx, view, cx, cy, arcR, -Math.PI * 0.15, Math.PI * 1.45, 1);
+    if (reduced) {
+      drawGhostDot(ctx, view, cx, (cy + tipY) / 2, 0.9);
+      const a = Math.PI * 0.35;
+      drawGhostDot(ctx, view, cx + Math.cos(a) * arcR, cy + Math.sin(a) * arcR, 0.9);
+    } else {
+      const period = 3.2;
+      const u = (clock % period) / period;
+      let gx;
+      let gy;
+      let ga = 1;
+      if (u < 0.38) {
+        const k = easeInOut(u / 0.38);
+        gx = cx;
+        gy = cy - 4 + (tipY - (cy - 4)) * k;
+      } else if (u < 0.86) {
+        const k = (u - 0.38) / 0.48;
+        const a0 = -Math.PI / 2;
+        const a = a0 + k * Math.PI * 2;
+        gx = cx + Math.cos(a) * arcR;
+        gy = cy + Math.sin(a) * arcR;
+      } else {
+        const k = easeInOut((u - 0.86) / 0.14);
+        gx = cx;
+        gy = tipY + ((cy - 4) - tipY) * k;
+        ga = 1 - 0.15 * k;
+      }
+      drawGhostDot(ctx, view, gx, gy, ga);
+    }
+  }
+
+  if (rightOn) {
+    const x = SAW_AXIS_X + 26;
+    const y0 = 108;
+    const y1 = 332;
+    drawVerticalDoubleArrow(ctx, view, x, y0, y1, 1);
+    let gy;
+    if (reduced) {
+      gy = (y0 + y1) / 2;
+    } else {
+      const period = 1.6;
+      const k = (1 - Math.cos(((clock % period) / period) * Math.PI * 2)) / 2;
+      gy = y0 + 18 + (y1 - y0 - 36) * k;
+    }
+    drawGhostDot(ctx, view, x, gy, 1);
+  }
+}
+
+function setupCssCanvas(canvas, fallbackW, fallbackH) {
+  if (!canvas || typeof canvas.getContext !== "function") return null;
+  const ctx = canvas.getContext("2d", { alpha: false });
+  if (!ctx) return null;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const cssW = Math.max(1, canvas.clientWidth || fallbackW);
+  const cssH = Math.max(1, canvas.clientHeight || fallbackH);
+  const w = Math.round(cssW * dpr);
+  const h = Math.round(cssH * dpr);
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { ctx, cssW, cssH };
+}
+
+function drawTitleGuideIcons(ctx, cssW, cssH) {
+  // Logical 320×80, then scale to the CSS box.
+  const scale = Math.min(cssW / 320, cssH / 80);
+  const ox = (cssW - 320 * scale) / 2;
+  const oy = (cssH - 80 * scale) / 2;
+  const view = {
+    sx(x) {
+      return ox + x * scale;
+    },
+    sy(y) {
+      return oy + y * scale;
+    },
+    px(wu) {
+      return wu * scale;
+    },
+  };
+  ctx.save();
+  ctx.fillStyle = HUD_BG;
+  ctx.fillRect(0, 0, cssW, cssH);
+
+  // Left: grab disc, up arrow, circular arrow.
+  const lcx = 78;
+  const lcy = 40;
+  const lr = 28;
+  ctx.beginPath();
+  ctx.arc(view.sx(lcx), view.sy(lcy), view.px(lr), 0, Math.PI * 2);
+  ctx.fillStyle = rgba("#d8c4a0", 0.7);
+  ctx.fill();
+  ctx.strokeStyle = rgba(IRON, 0.55);
+  ctx.lineWidth = Math.max(1, view.px(1.6));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(view.sx(lcx), view.sy(lcy), view.px(4.5), 0, Math.PI * 2);
+  ctx.fillStyle = rgba("#8a6840", 0.8);
+  ctx.fill();
+  drawUpArrow(ctx, view, lcx, lcy - 2, lcy - lr * 0.92, 1.15, 7);
+  drawArcArrow(ctx, view, lcx, lcy, lr * 0.78, -Math.PI * 0.2, Math.PI * 1.4, 1.15, 6.5);
+  drawGhostDot(ctx, view, lcx, lcy - lr * 0.45, 0.95, 6.5);
+  const la = Math.PI * 0.35;
+  drawGhostDot(ctx, view, lcx + Math.cos(la) * lr * 0.78, lcy + Math.sin(la) * lr * 0.78, 0.95, 6.5);
+
+  // Divider
+  ctx.beginPath();
+  ctx.strokeStyle = rgba(INK, 0.16);
+  ctx.lineWidth = Math.max(1, view.px(1));
+  ctx.moveTo(view.sx(160), view.sy(12));
+  ctx.lineTo(view.sx(160), view.sy(68));
+  ctx.stroke();
+
+  // Right: vertical double arrow and thumb.
+  const rx = 236;
+  drawVerticalDoubleArrow(ctx, view, rx, 10, 70, 1.15, 7);
+  drawGhostDot(ctx, view, rx, 40, 0.95, 6.5);
+  ctx.restore();
+}
+
 /**
  * タイトルの線の縮小図。種類名は出さない。
  * @param {HTMLCanvasElement} canvas
@@ -887,6 +1124,16 @@ export function drawTitlePreview(canvas, state) {
     const fit = fitPath(path, box, 2);
     drawMappedPoly(ctx, path, (p) => fit.map(p), SAMPLE, 2.2, 0.82);
   }
+}
+
+/**
+ * タイトルの操作案内（静止図）。
+ * @param {HTMLCanvasElement} canvas
+ */
+export function drawTitleGuides(canvas) {
+  const setup = setupCssCanvas(canvas, 320, 80);
+  if (!setup) return;
+  drawTitleGuideIcons(setup.ctx, setup.cssW, setup.cssH);
 }
 
 /**
@@ -945,6 +1192,7 @@ export function drawScene(ctx, state, opts = {}) {
   if (showGuides) {
     drawThumbGuide(ctx, view, leftPos.x, leftPos.y, leftPos.active, !!state?.hintLeft);
     drawThumbGuide(ctx, view, rightPos.x, rightPos.y, rightPos.active, !!state?.hintRight);
+    drawMotionGuides(ctx, view, state, fx, reduced);
   }
 
   // Screen-fixed, unzoomed. Hidden during reveal so the overlay is the comparison.

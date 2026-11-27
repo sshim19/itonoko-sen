@@ -41,6 +41,7 @@ export function bindScreens(root = document) {
     portrait: root.querySelector("#screen-portrait"),
     canvas: root.querySelector("#game"),
     titlePath: root.querySelector("#title-path"),
+    titleGuides: root.querySelector("#title-guides"),
   };
 
   function setPlaying(on) {
